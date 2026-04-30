@@ -1,5 +1,8 @@
 # seat_availability.py
+# Miles Ratner
+
 # from db_connection import get_connection  # shared connection helper used for local server to connect
+# Above statement was commented out since it was used to test on a local server
 
 def check_seat_availability(flight_number, date):
     # open a connection to the SQL Server database
@@ -39,3 +42,11 @@ def check_seat_availability(flight_number, date):
     print(f"Seats taken   : {taken}")
     print(f"Available     : {available}")
     print("The specified flight is full." if available == 0 else "Seats are available on the specified flight.")
+
+# Small script used to execute via cmd line
+# Used by typing: python queries/seat_availability.py
+# After typing the above statement, it should prompt the user
+if __name__ == "__main__":
+    flight_num = int(input("Enter flight number: ").strip())
+    date = input("Enter date (YYYY-MM-DD): ").strip()
+    check_seat_availability(flight_num, date)
