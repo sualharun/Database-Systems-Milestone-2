@@ -17,6 +17,8 @@ import pyodbc
 import sys
 import os
 from datetime import datetime, date
+from queries.flight_search_by_number import search_flight_by_number
+from queries.seat_availability import check_seat_availability
 
 # ─────────────────────────────────────────────
 # CONNECTION
@@ -185,65 +187,10 @@ def flight_search_itinerary(conn):
 # 1b. FLIGHT DETAILS BY FLIGHT NUMBER
 # ─────────────────────────────────────────────
 
-def flight_search_by_number(conn):
+def run_flight_search_by_number(conn):
     section("Flight Search — By Flight Number")
     flight_no = ask("Flight number")
-
-    try:
-        flight_no = int(flight_no)
-    except ValueError:
-        print("  [!] Flight number must be an integer.")
-        pause()
-        return
-
-    cursor = conn.cursor()
-    sql = """
-        SELECT
-            f.Number,
-            f.Airline,
-            f.Weekdays,
-            fl.Leg_no,
-            dep.Airport_code AS DepCode,
-            dep.City         AS DepCity,
-            dep.State        AS DepState,
-            arr.Airport_code AS ArrCode,
-            arr.City         AS ArrCity,
-            arr.State        AS ArrState,
-            fl.Scheduled_dep_time,
-            fl.Scheduled_arr_time
-        FROM FLIGHT f
-        JOIN FLIGHT_LEG fl ON fl.Flight_number   = f.Number
-        JOIN AIRPORT dep   ON dep.Airport_code    = fl.Dep_airport_code
-        JOIN AIRPORT arr   ON arr.Airport_code    = fl.Arr_airport_code
-        WHERE f.Number = ?
-        ORDER BY fl.Leg_no
-    """
-    cursor.execute(sql, (flight_no,))
-    rows = cursor.fetchall()
-
-    if not rows:
-        print(f"\n  No flight found with number {flight_no}.")
-        pause()
-        return
-
-    print(f"\n  Flight {rows[0].Number} — {rows[0].Airline}")
-    print(f"  Operates on weekdays: {rows[0].Weekdays or 'daily'}\n")
-    for r in rows:
-        print(f"  Leg {r.Leg_no}: {r.DepCode} ({r.DepCity}, {r.DepState}) "
-              f"{r.Scheduled_dep_time}  →  "
-              f"{r.ArrCode} ({r.ArrCity}, {r.ArrState}) {r.Scheduled_arr_time}")
-
-    # Also show fares
-    cursor.execute(
-        "SELECT Code, Amount, Restrictions FROM FARE WHERE Flight_number = ? ORDER BY Amount",
-        (flight_no,)
-    )
-    fares = cursor.fetchall()
-    if fares:
-        print(f"\n  Available fares:")
-        for fare in fares:
-            print(f"    [{fare.Code}]  ${fare.Amount:,.0f}  —  {fare.Restrictions}")
-
+    search_flight_by_number(flight_no)
     pause()
 
 
@@ -307,79 +254,11 @@ def aircraft_utilization_report(conn):
 # 3a. SEAT AVAILABILITY CHECK
 # ─────────────────────────────────────────────
 
-def seat_availability(conn):
+def run_seat_availability(conn):
     section("Passenger & Booking — Seat Availability Check")
     flight_no = ask("Flight number")
-    leg_no    = ask("Leg number (press Enter for 1)", required=False) or "1"
     date_str  = ask("Date (YYYY-MM-DD)")
-
-    try:
-        flight_no = int(flight_no)
-        leg_no    = int(leg_no)
-        datetime.strptime(date_str, "%Y-%m-%d")
-    except ValueError:
-        print("  [!] Invalid input.")
-        pause()
-        return
-
-    cursor = conn.cursor()
-
-    # Fetch the leg instance
-    cursor.execute("""
-        SELECT
-            li.Flight_number,
-            li.Leg_no,
-            li.Date,
-            li.No_of_avail_seats,
-            li.Airplane_id,
-            li.Dep_time,
-            li.Arr_time,
-            a.Total_no_of_seats,
-            at.Type_name,
-            at.Company,
-            dep.City AS DepCity,
-            dep.Airport_code AS DepCode,
-            arr.City AS ArrCity,
-            arr.Airport_code AS ArrCode
-        FROM LEG_INSTANCE li
-        JOIN AIRPLANE      a   ON a.Airplane_id    = li.Airplane_id
-        JOIN AIRPLANE_TYPE at  ON at.Type_name      = a.Type_name
-        JOIN FLIGHT_LEG    fl  ON fl.Flight_number  = li.Flight_number
-                               AND fl.Leg_no        = li.Leg_no
-        JOIN AIRPORT       dep ON dep.Airport_code  = fl.Dep_airport_code
-        JOIN AIRPORT       arr ON arr.Airport_code  = fl.Arr_airport_code
-        WHERE li.Flight_number = ? AND li.Leg_no = ? AND li.Date = ?
-    """, (flight_no, leg_no, date_str))
-
-    row = cursor.fetchone()
-    if not row:
-        print(f"\n  No leg instance found for Flight {flight_no} Leg {leg_no} on {date_str}.")
-        pause()
-        return
-
-    # Count confirmed bookings from SEAT
-    cursor.execute("""
-        SELECT COUNT(*) AS Booked
-        FROM SEAT
-        WHERE Airplane_id = ? AND Date = ? AND Leg_no = ?
-          AND Customer_name IS NOT NULL
-    """, (row.Airplane_id, date_str, leg_no))
-    booked_row = cursor.fetchone()
-    booked = booked_row.Booked if booked_row else 0
-
-    total    = row.Total_no_of_seats
-    avail    = row.No_of_avail_seats
-    pct_full = ((total - avail) / total * 100) if total > 0 else 0
-
-    print(f"\n  Flight {flight_no} — Leg {leg_no} — {date_str}")
-    print(f"  Route:    {row.DepCode} ({row.DepCity}) → {row.ArrCode} ({row.ArrCity})")
-    print(f"  Departs:  {row.Dep_time}   Arrives: {row.Arr_time}")
-    print(f"  Aircraft: {row.Airplane_id} ({row.Type_name}, {row.Company})")
-    hr("─", 50)
-    print(f"  Total seats:       {total:>5}")
-    print(f"  Confirmed bookings:{booked:>5}")
-    print(f"  Available seats:   {avail:>5}  ({100 - pct_full:.1f}% open)")
-
+    check_seat_availability(flight_no, date_str)
     pause()
 
 
@@ -475,9 +354,9 @@ def main():
 
     dispatch = {
         "1": flight_search_itinerary,
-        "2": flight_search_by_number,
+        "2": run_flight_search_by_number,
         "3": aircraft_utilization_report,
-        "4": seat_availability,
+        "4": run_seat_availability,
         "5": passenger_itinerary,
     }
 
