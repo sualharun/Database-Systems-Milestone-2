@@ -30,7 +30,9 @@ FILES TO RUN:
 SETUP:
 - setup database using setup_m1.sql
 - then run MileStone2_combined.py
-  python3 milestone2/MileStone2_combined.py
+  
+  `python3 milestone2/MileStone2_combined.py`
+
   (make sure your cmd prompt is in the same directory as where you put milestone2)
 
 
