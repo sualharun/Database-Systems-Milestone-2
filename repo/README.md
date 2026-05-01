@@ -34,19 +34,5 @@ SETUP:
   (make sure your cmd prompt is in the same directory as where you put milestone2)
 
 
-## Milestones
-
-### Milestone 1
-Creates all database tables and imports CSV data from Canvas into SQL Server.
-
-### Milestone 2
-Command-line Python app with the following features:
-1. Flight Search — Travel itinerary between two airports (direct + 1-stop)
-2. Flight Search — By flight number
-3. Aircraft Utilization Report
-4. Seat Availability Check
-5. Passenger Itinerary Retrieval ("my trips")
-
-## Team Members
-- Sual Harun
-- [Add teammates]
+The program itself will direct you how to use it; choose a menu item and follow the instructions. 
+You can also run the functions from cmd prompt directly. 
