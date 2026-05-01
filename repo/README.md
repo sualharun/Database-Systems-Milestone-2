@@ -9,7 +9,7 @@ Team project implementing an Airport Management System using Python + Microsoft 
 │   └── setup_m1.sql        # Table creation + CSV data import
 │
 ├── milestone2/
-│   ├── airport.py          # Main command-line application
+│   ├── MileStone2_combined.py   # Main command-line application
 │   └── readme.md          # Build & run instructions
 │
 └── data/
