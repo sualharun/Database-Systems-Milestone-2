@@ -262,7 +262,8 @@ def flight_search_by_number(conn):
       #  "Encrypt=no;"
     #)
 
-def aircraft_utilization_report(start_date, end_date):
+def aircraft_utilization_report(start_date, end_date, conn):
+  
     """
     Returns a list of dictionaries:
     [
@@ -285,7 +286,7 @@ def aircraft_utilization_report(start_date, end_date):
         ORDER BY Total_Flights DESC;
     """
 
-    conn = get_connection()
+    #conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(query, (start_date, end_date))
 
@@ -297,14 +298,29 @@ def aircraft_utilization_report(start_date, end_date):
             "Total_Flights": row.Total_Flights
         })
 
-    conn.close()
+    
+    conn.close()  
     return results
 
-def print_aircraft_utilization(start_date, end_date):
+#def print_aircraft_utilization(start_date, end_date):
+ def print_aircraft_utilization(conn):  
     """
     Pretty-prints the Aircraft Utilization Report.
     """
-    data = aircraft_utilization_report(start_date, end_date)
+   # added here when merged 
+    start_date = ask("Start date (YYYY-MM-DD)") 
+    end_date = ask("End date   (YYYY-MM-DD)")
+  
+    try:
+          datetime.strptime(start_date, "%Y-%m-%d")
+          datetime.strptime(end_date,   "%Y-%m-%d")
+      except ValueError:
+          print("  [!] Invalid date format. Use YYYY-MM-DD.")
+          pause()
+          return
+    # end merge addition 
+   
+    data = aircraft_utilization_report(start_date, end_date, conn)
 
     print("\n=== Aircraft Utilization Report ===")
     print(f"Date Range: {start_date} → {end_date}\n")
@@ -326,9 +342,20 @@ if __name__ == "__main__":
 # from db_connection import get_connection  # shared connection helper used for local server to connect
 # Above statement was commented out since it was used to test on a local server
 
-def check_seat_availability(flight_number, date):
-    # open a connection to the SQL Server database
-    conn = get_connection()
+
+def run_seat_availability(conn):
+    section("Passenger & Booking — Seat Availability Check")
+    flight_number = ask("Flight number")
+    date  = ask("Date (YYYY-MM-DD)")
+    check_seat_availability(flight_number, date, conn)
+    pause()
+
+#def check_seat_availability(flight_number, date):
+def check_seat_availability(flight_number, date, conn):
+  # open a connection to the SQL Server database
+    #conn = get_connection() 
+  
+  #instead, we're getting it from parameters
     cursor = conn.cursor()  # cursor to send queries and get results
 
     # Use query for LEG_INSTANCE for the specific flight and date
@@ -466,8 +493,10 @@ def main():
     dispatch = {
         "1": flight_search_itinerary,
         "2": flight_search_by_number,
-        "3": aircraft_utilization_report,
-        "4": seat_availability,
+      #"3": aircraft_utilization_report, 
+        "3": print_aircraft_utilization,
+        #"4": seat_availability,
+        "4": run_seat_availability, 
         "5": passenger_itinerary,
     }
 
