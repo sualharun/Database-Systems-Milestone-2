@@ -22,7 +22,6 @@ System requirements:
       - pip3 install pyodbc
 - python 3.14
 - SQL Server (mssql) for VS code (most recent)
-- VS Code, since we use mssql
 
 FILES TO RUN: 
 `milestone1/setup_m1.sql`
