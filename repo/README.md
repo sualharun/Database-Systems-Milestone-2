@@ -24,9 +24,9 @@ System requirements:
 - SQL Server (mssql) for VS code (most recent)
 - Docker - https://www.docker.com/products/docker-desktop
 
-FILES TO RUN: 
-`milestone1/setup_m1.sql`
-`milestone2/MileStone2_combined.py`
+#### FILES TO RUN: 
+    milestone1/setup_m1.sql
+    milestone2/MileStone2_combined.py
 
 SETUP:
 1) Start Docker Desktop
