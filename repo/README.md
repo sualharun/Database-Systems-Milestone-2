@@ -22,18 +22,44 @@ System requirements:
       - pip3 install pyodbc
 - python 3.14
 - SQL Server (mssql) for VS code (most recent)
+- Docker
 
 FILES TO RUN: 
 `milestone1/setup_m1.sql`
 `milestone2/MileStone2_combined.py`
 
 SETUP:
-- setup database using setup_m1.sql
-- then run MileStone2_combined.py
-  
-  `python3 milestone2/MileStone2_combined.py`
+1) Start Docker Desktop
 
-  (make sure your cmd prompt is in the same directory as where you put milestone2)
+    Make sure Docker Desktop is installed and running.
+
+2) Start SQL Server container
+   
+    `docker run -e ACCEPT_EULA=Y -e SA_PASSWORD=StrongPass123 -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest`
+
+4) Create the DB
+   
+    `docker exec -it sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost,1433 -U sa -P StrongPass123 -No -Q "CREATE DATABASE AirportDB"`
+
+6) Load Milestone 1 data
+   
+    `docker cp <path_to_csv_folder>/. sqlserver:/var/opt/mssql/import/
+docker cp <path_to_setup_m1.sql>/setup_m1.sql sqlserver:/var/opt/mssql/import/setup_m1.sql
+docker exec -it sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost,1433 -U sa -P StrongPass123 -No -d AirportDB -i /var/opt/mssql/import/setup_m1.sql`
+
+8) Apply Milestone 2 schema (SEAT table)
+   
+    `docker exec -it sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost,1433 -U sa -P StrongPass123 -No -d AirportDB -Q "DROP TABLE IF EXISTS SEAT; CREATE TABLE SEAT (Airplane_id VARCHAR(20) NOT NULL, Seat_no VARCHAR(5) NOT NULL, Date DATE NOT NULL, Leg_no INT NOT NULL, Customer_name VARCHAR(100) NULL, Cphone VARCHAR(20) NULL, PRIMARY KEY (Airplane_id, Seat_no, Date, Leg_no), FOREIGN KEY (Airplane_id) REFERENCES AIRPLANE(Airplane_id));"`
+
+10) Install Python dependency
+    
+    `pip3 install pyodbc`
+
+12) run MileStone2_combined.py
+    
+    `python3 milestone2/MileStone2_combined.py`
+
+    (make sure your cmd prompt is in the same directory as where you put milestone2)
 
 
 The program itself will direct you how to use it; choose a menu item and follow the instructions. 
