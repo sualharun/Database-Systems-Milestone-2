@@ -299,25 +299,23 @@ def aircraft_utilization_report(start_date, end_date, conn):
         })
 
     
-    conn.close()  
     return results
 
-#def print_aircraft_utilization(start_date, end_date):
- def print_aircraft_utilization(conn):  
+def print_aircraft_utilization(conn):
     """
     Pretty-prints the Aircraft Utilization Report.
     """
-   # added here when merged 
+    # added here when merged
     start_date = ask("Start date (YYYY-MM-DD)") 
     end_date = ask("End date   (YYYY-MM-DD)")
   
     try:
-          datetime.strptime(start_date, "%Y-%m-%d")
-          datetime.strptime(end_date,   "%Y-%m-%d")
-      except ValueError:
-          print("  [!] Invalid date format. Use YYYY-MM-DD.")
-          pause()
-          return
+        datetime.strptime(start_date, "%Y-%m-%d")
+        datetime.strptime(end_date, "%Y-%m-%d")
+    except ValueError:
+        print("  [!] Invalid date format. Use YYYY-MM-DD.")
+        pause()
+        return
     # end merge addition 
    
     data = aircraft_utilization_report(start_date, end_date, conn)
@@ -330,9 +328,6 @@ def aircraft_utilization_report(start_date, end_date, conn):
     for row in data:
         type_name = row['Type_name'] if row['Type_name'] else "Unknown"
         print(f"{row['Airplane_id']:<15}{type_name:<20}{row['Total_Flights']:<15}")
-
-if __name__ == "__main__":
-    print_aircraft_utilization("2025-01-01", "2025-12-31")
 
 
 # ─────────────────────────────────────────────
@@ -372,7 +367,6 @@ def check_seat_availability(flight_number, date, conn):
     """, (flight_number, date))  # pyodbc swaps puts these values in the '?' respectively
 
     row = cursor.fetchone()  # we only expect one result (one flight instance per flight + date)
-    conn.close()             # always close the connection when done
 
     # if nothing returns, then flight DNE on specified date
     if not row:

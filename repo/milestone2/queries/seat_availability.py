@@ -1,8 +1,33 @@
 # seat_availability.py
 # Miles Ratner
 
+import os
+
+import pyodbc
+
 # from db_connection import get_connection  # shared connection helper used for local server to connect
 # Above statement was commented out since it was used to test on a local server
+
+def get_connection():
+    """
+    Returns a pyodbc connection to the MS SQL Server database.
+    Reads optional env vars so credentials are not hard-coded.
+    """
+    server   = os.getenv("DB_SERVER", "localhost")
+    database = os.getenv("DB_NAME",   "AirportDB")
+    user     = os.getenv("DB_USER",   "sa")
+    password = os.getenv("DB_PASS",   "StrongPass123")
+
+    conn_str = (
+        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={user};"
+        f"PWD={password};"
+        f"TrustServerCertificate=yes;"
+    )
+    return pyodbc.connect(conn_str)
+
 
 def check_seat_availability(flight_number, date):
     # open a connection to the SQL Server database
