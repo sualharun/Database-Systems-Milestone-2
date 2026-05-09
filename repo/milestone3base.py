@@ -6,21 +6,15 @@ import os
 
 # ── DB Connection ──
 
-def get_connection():
-    server   = os.getenv("DB_SERVER", "localhost")
-    database = os.getenv("DB_NAME",   "AirportDB")
-    user     = os.getenv("DB_USER",   "sa")
-    password = os.getenv("DB_PASS",   "StrongPass123")
-
-    conn_str = (
-        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
-        f"SERVER={server};"
-        f"DATABASE={database};"
-        f"UID={user};"
-        f"PWD={password};"
-        f"TrustServerCertificate=yes;"
+def get_connection():   #Make sure to update these to test it
+    return pyodbc.connect(
+        "Driver={ODBC Driver 18 for SQL Server};"
+        "Server=localhost,1433;"
+        "Database=AirportDB;"
+        "UID=sa;"
+        "PWD=NewStrongPassword123!;"
+        "Encrypt=no;"
     )
-    return pyodbc.connect(conn_str)
 
 
 # ── Globals ──
@@ -80,6 +74,11 @@ def make_tree(parent, columns):
 # -------------------------
 # Logic for Screen A (Airport Codes) — Flight Search 2a
 # -------------------------
+def next_from_airport():
+    show_frame(screen_C)
+
+def next_from_flight():
+    show_frame(screen_C)
 def search_by_airport():
     dep = entry_dep_code.get().strip()
     arr = entry_arr_code.get().strip()
@@ -361,10 +360,16 @@ entry_date_a.grid(row=2, column=1, padx=5, pady=5)
 
 btn_frame_a = tk.Frame(screen_airport)
 btn_frame_a.pack(pady=10)
+
 tk.Button(btn_frame_a, text="Search", width=12, font=("Arial", 11),
           command=search_by_airport).pack(side="left", padx=10)
+
+tk.Button(btn_frame_a, text="Next", width=12, font=("Arial", 11),
+          command=next_from_airport).pack(side="left", padx=10)
+
 tk.Button(btn_frame_a, text="Back", width=12, font=("Arial", 11),
           command=back_to_main).pack(side="left", padx=10)
+
 
 result_frame_a = tk.Frame(screen_airport)
 result_frame_a.pack(fill="both", expand=True, padx=10, pady=10)
@@ -388,35 +393,114 @@ entry_date_b.grid(row=1, column=1, padx=5, pady=5)
 
 btn_frame_b = tk.Frame(screen_flight)
 btn_frame_b.pack(pady=10)
+
 tk.Button(btn_frame_b, text="Search", width=12, font=("Arial", 11),
           command=search_by_flight).pack(side="left", padx=10)
+
+tk.Button(btn_frame_b, text="Next", width=12, font=("Arial", 11),
+          command=next_from_flight).pack(side="left", padx=10)
+
 tk.Button(btn_frame_b, text="Back", width=12, font=("Arial", 11),
           command=back_to_main_B).pack(side="left", padx=10)
+
 
 result_frame_b = tk.Frame(screen_flight)
 result_frame_b.pack(fill="both", expand=True, padx=10, pady=10)
 
 # -------------------------
-# SCREEN C — Final Screen
+# SCREEN C — SQL Query
 # -------------------------
-label_C = tk.Label(screen_C, text="Final Screen: Create Report")
-label_C.pack(pady=10)
 
-entry_report = tk.Entry(screen_C, width=30)
-entry_report.pack(pady=5)
-entry_report.insert(0, "Enter report name")
+def run_aircraft_utilization():
+    reg = entry_airplane_id.get().strip()
+    start = entry_start_date.get().strip()
+    end = entry_end_date.get().strip()
 
-create_button = tk.Button(screen_C, text="Create Report", width=20, command=create_report)
-create_button.pack(pady=10)
+    if not reg or not start or not end:
+        messagebox.showwarning("Missing Input", "Please fill in all fields.")
+        return
 
-next_C = tk.Button(screen_C, text="Next", width=20, command=next_from_C)
-next_C.pack(pady=10)
+    if not conn:
+        messagebox.showerror("Database Error", "No database connection.")
+        return
 
-back_C = tk.Button(screen_C, text="Back", width=20, command=back_from_C)
-back_C.pack(pady=10)
+    # Clear previous results
+    for widget in result_frame_C.winfo_children():
+        widget.destroy()
 
-result_label_C = tk.Label(screen_C, text="")
-result_label_C.pack(pady=10)
+    cursor = conn.cursor()
+
+    sql = """
+        SELECT 
+            A.Airplane_id AS Registration,
+            AT.Type_name AS AirplaneType,
+            COUNT(LI.Leg_no) AS TotalFlights
+        FROM AIRPLANE A
+        LEFT JOIN AIRPLANE_TYPE AT
+            ON A.Type_name = AT.Type_name
+        LEFT JOIN LEG_INSTANCE LI
+            ON A.Airplane_id = LI.Airplane_id
+            AND LI.Date BETWEEN ? AND ?
+        WHERE A.Airplane_id = ?
+        GROUP BY A.Airplane_id, AT.Type_name
+    """
+
+    try:
+        cursor.execute(sql, (start, end, reg))
+        rows = cursor.fetchall()
+    except pyodbc.Error as e:
+        messagebox.showerror("Query Error", str(e))
+        return
+
+    tk.Label(result_frame_C, text="Aircraft Utilization Report",
+             font=("Arial", 14, "bold")).pack(anchor="w")
+
+    if rows:
+        tree = make_tree(result_frame_C,
+                         ("Registration", "Airplane Type", "Total Flights"))
+        for r in rows:
+            tree.insert("", "end", values=(r.Registration, r.AirplaneType, r.TotalFlights))
+    else:
+        tk.Label(result_frame_C, text="No data found for this airplane.",
+                 font=("Arial", 12)).pack(anchor="w")
+
+
+# -------------------------
+# SCREEN C — Aircraft Utilization Report
+# -------------------------
+tk.Label(screen_C, text="Aircraft Utilization Report",
+         font=("Arial", 16, "bold")).pack(pady=10)
+
+form_C = tk.Frame(screen_C)
+form_C.pack(pady=10)
+
+tk.Label(form_C, text="Airplane Registration #:", font=("Arial", 11)).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+entry_airplane_id = tk.Entry(form_C, font=("Arial", 11), width=15)
+entry_airplane_id.grid(row=0, column=1, padx=5, pady=5)
+
+tk.Label(form_C, text="Start Date (YYYY-MM-DD):", font=("Arial", 11)).grid(row=1, column=0, sticky="e", padx=5, pady=5)
+entry_start_date = tk.Entry(form_C, font=("Arial", 11), width=15)
+entry_start_date.grid(row=1, column=1, padx=5, pady=5)
+
+tk.Label(form_C, text="End Date (YYYY-MM-DD):", font=("Arial", 11)).grid(row=2, column=0, sticky="e", padx=5, pady=5)
+entry_end_date = tk.Entry(form_C, font=("Arial", 11), width=15)
+entry_end_date.grid(row=2, column=1, padx=5, pady=5)
+
+btn_frame_C = tk.Frame(screen_C)
+btn_frame_C.pack(pady=10)
+
+tk.Button(btn_frame_C, text="Create Report", width=15, font=("Arial", 11),
+          command=run_aircraft_utilization).pack(side="left", padx=10)
+
+tk.Button(btn_frame_C, text="Next", width=12, font=("Arial", 11),
+          command=next_from_C).pack(side="left", padx=10)
+
+tk.Button(btn_frame_C, text="Back", width=12, font=("Arial", 11),
+          command=back_from_C).pack(side="left", padx=10)
+
+result_frame_C = tk.Frame(screen_C)
+result_frame_C.pack(fill="both", expand=True, padx=10, pady=10)
+
 
 # -------------------------
 # SCREEN D — Buy a Seat + Back
