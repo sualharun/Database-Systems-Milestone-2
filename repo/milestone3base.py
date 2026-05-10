@@ -9,11 +9,12 @@ import os
 def get_connection():   #Make sure to update these to test it
     return pyodbc.connect(
         "Driver={ODBC Driver 18 for SQL Server};"
-        "Server=localhost,1433;"
-        "Database=AirportDB;"
-        "UID=sa;"
-        "PWD=NewStrongPassword123!;"
+        r"SERVER=localhost\MSSQLSERVER01;"
+        "DATABASE=AIRPORTDB;"
+        "UID=BlerbBlerb;"
+        "PWD=IAMDONE;"
         "Encrypt=no;"
+        "TrustServerCertificate=yes;"
     )
 
 
@@ -267,7 +268,7 @@ def back_to_main_B():
     show_frame(screen_main)
 
 # -------------------------
-# Logic for Screen C
+# Logic for Screen C (Report)
 # -------------------------
 def create_report():
     value = entry_report.get()
@@ -275,6 +276,7 @@ def create_report():
 
 def next_from_C():
     show_frame(screen_D)
+    #seatAvail()
 
 def back_from_C():
     show_frame(screen_main)
@@ -282,6 +284,48 @@ def back_from_C():
 # -------------------------
 # Logic for Screen D (Buy a Seat)
 # -------------------------
+# This also includes showing if there are seats available 
+#if not seats available, can't buy 
+#if there ARE, then CAN buy, and we go to buy functionality 
+def seatAvail():
+    
+    flight_number = entry_flight.get().strip()
+    date = entry_date_b.get().strip()
+    
+    conn = get_connection(); 
+    #taken from M2
+    cursor = conn.cursor()  # cursor to send queries and get results
+
+    # Use query for LEG_INSTANCE for the specific flight and date
+    # and join AIRPLANE to obtain total seats for assigned plane
+    # No_of_avail_seats is already stored in LEG_INSTANCE from given schema
+    # The ? placeholders are interacted with by pyodbc to fill them
+    cursor.execute("""
+        SELECT
+            a.Total_no_of_seats,   -- max seats that airplane can hold
+            li.No_of_avail_seats   -- seats not being used on this specific flight and date
+        FROM LEG_INSTANCE li
+        JOIN AIRPLANE a ON li.Airplane_id = a.Airplane_id
+        WHERE li.Flight_number = ? AND li.Date = ?
+    """, (flight_number, date))  # pyodbc swaps puts these values in the '?' respectively
+
+    row = cursor.fetchone()  # we only expect one result (one flight instance per flight + date)
+
+    # if nothing returns, then flight DNE on specified date
+    if not row:
+        avail_label.config(text="No such flight on that date.")
+        return
+       
+
+    # calc seats taken by subtracting available seats from total amount of seats
+    total = row.Total_no_of_seats
+    available = row.No_of_avail_seats
+    taken = total - available  # derived value of taken seats
+
+    avail_label.config(screen_D, text=f"Remaining Seats: {available}", font=("Arial", 11))
+
+    conn.close()
+
 def next_from_D():
     show_frame(screen_E)
 
@@ -501,6 +545,13 @@ tk.Button(btn_frame_C, text="Back", width=12, font=("Arial", 11),
 result_frame_C = tk.Frame(screen_C)
 result_frame_C.pack(fill="both", expand=True, padx=10, pady=10)
 
+result_label_C = tk.Label(result_frame_C, text="", font=("Arial", 11))
+result_label_C.pack()
+
+tk.Label(form_C, text="Report:", font=("Arial", 11)).grid(row=3, column=0, sticky="e", padx=5, pady=5)
+entry_report = tk.Entry(form_C, font=("Arial", 11), width=15)
+entry_report.grid(row=3, column=1, padx=5, pady=5)
+
 
 # -------------------------
 # SCREEN D — Buy a Seat + Back
@@ -508,14 +559,31 @@ result_frame_C.pack(fill="both", expand=True, padx=10, pady=10)
 label_D = tk.Label(screen_D, text="Screen D")
 label_D.pack(pady=10)
 
+
+form_D = tk.Frame(screen_D)
+form_D.pack(pady=10)
+
+tk.Label(form_D, text="Airplane Registration #:", font=("Arial", 11)).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+entry_airplane_id = tk.Entry(form_D, font=("Arial", 11), width=15)
+entry_airplane_id.grid(row=0, column=1, padx=5, pady=5)
+
+tk.Label(form_D, text="Date (YYYY-MM-DD):", font=("Arial", 11)).grid(row=2, column=0, sticky="e", padx=5, pady=5)
+entry_date_d = tk.Entry(form_D, font=("Arial", 11), width=12)
+entry_date_d.grid(row=2, column=1, padx=5, pady=5)
+    
+check_button = tk.Button(screen_D, text="Check Seats", command=seatAvail)
+check_button.pack(pady=10)
+
+avail_label = tk.Label(screen_D, text="")
+avail_label.pack(pady=10)
+
 buy_button = tk.Button(screen_D, text="Buy a Seat", width=20, command=next_from_D)
 buy_button.pack(pady=10)
 
 back_D = tk.Button(screen_D, text="Back", width=20, command=back_from_D)
 back_D.pack(pady=10)
 
-result_label_D = tk.Label(screen_D, text="")
-result_label_D.pack(pady=10)
+
 
 # -------------------------
 # SCREEN E — Back Only
