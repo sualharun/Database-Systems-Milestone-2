@@ -6,13 +6,13 @@ import os
 
 # ── DB Connection ──
 
-def get_connection():   #Make sure to update these to test it
+def get_connection():
     return pyodbc.connect(
-        "Driver={ODBC Driver 18 for SQL Server};"
-        r"SERVER=localhost\MSSQLSERVER01;"
-        "DATABASE=AIRPORTDB;"
-        "UID=BlerbBlerb;"
-        "PWD=IAMDONE;"
+        "DRIVER={ODBC Driver 18 for SQL Server};"
+        "SERVER=localhost,1433;"
+        "DATABASE=AirportDB;"
+        "UID=sa;"
+        "PWD=StrongPass123;"
         "Encrypt=no;"
         "TrustServerCertificate=yes;"
     )
@@ -289,10 +289,12 @@ def back_from_C():
 #if there ARE, then CAN buy, and we go to buy functionality 
 def seatAvail():
     
-    flight_number = entry_flight.get().strip()
-    date = entry_date_b.get().strip()
+    print("seatAvail called")
+    print("flight:", entry_flight_d.get())
+    print("date:", entry_date_d.get())
+    flight_number = entry_flight_d.get().strip()
+    date = entry_date_d.get().strip()
     
-    conn = get_connection(); 
     #taken from M2
     cursor = conn.cursor()  # cursor to send queries and get results
 
@@ -314,17 +316,21 @@ def seatAvail():
     # if nothing returns, then flight DNE on specified date
     if not row:
         avail_label.config(text="No such flight on that date.")
+        buy_button.config(state="disabled")
         return
-       
 
     # calc seats taken by subtracting available seats from total amount of seats
     total = row.Total_no_of_seats
     available = row.No_of_avail_seats
     taken = total - available  # derived value of taken seats
 
-    avail_label.config(screen_D, text=f"Remaining Seats: {available}", font=("Arial", 11))
+    avail_label.config(text=f"Total: {total}  |  Available: {available}")
 
-    conn.close()
+    if available > 0:
+        buy_button.config(state="normal")
+    else:
+        buy_button.config(state="disabled")
+        messagebox.showwarning("Full", "This flight is full.")
 
 def next_from_D():
     show_frame(screen_E)
@@ -333,8 +339,33 @@ def back_from_D():
     show_frame(screen_C)
 
 # -------------------------
-# Logic for Screen E (Back only)
+# Logic for Screen E (Book a seat and Back)
 # -------------------------
+def book_seat():
+    flight_number = entry_flight_d.get().strip()
+    date = entry_date_d.get().strip()
+    customer_name = entry_name_e.get().strip()
+    customer_phone = entry_phone_e.get().strip()
+
+    if not customer_name or not customer_phone:
+        messagebox.showwarning("Missing Input", "Please enter your name and phone number.")
+        return
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE LEG_INSTANCE
+        SET No_of_avail_seats = No_of_avail_seats - 1
+        WHERE Flight_number = ? AND Date = ?
+        AND No_of_avail_seats > 0
+    """, (int(flight_number), date))
+    conn.commit()
+
+    messagebox.showinfo("Booked!", f"Seat booked for {customer_name} on flight {flight_number} on {date}.")
+    entry_name_e.delete(0, tk.END)
+    entry_phone_e.delete(0, tk.END)
+    show_frame(screen_D)
+    seatAvail()
+
 def back_from_E():
     show_frame(screen_D)
 
@@ -556,28 +587,28 @@ entry_report.grid(row=3, column=1, padx=5, pady=5)
 # -------------------------
 # SCREEN D — Buy a Seat + Back
 # -------------------------
-label_D = tk.Label(screen_D, text="Screen D")
+label_D = tk.Label(screen_D, text="Check Seat Availability")
 label_D.pack(pady=10)
 
 
 form_D = tk.Frame(screen_D)
 form_D.pack(pady=10)
 
-tk.Label(form_D, text="Airplane Registration #:", font=("Arial", 11)).grid(row=0, column=0, sticky="e", padx=5, pady=5)
-entry_airplane_id = tk.Entry(form_D, font=("Arial", 11), width=15)
-entry_airplane_id.grid(row=0, column=1, padx=5, pady=5)
+tk.Label(form_D, text="Flight Number:", font=("Arial", 11)).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+entry_flight_d = tk.Entry(form_D, font=("Arial", 11), width=15)
+entry_flight_d.grid(row=0, column=1, padx=5, pady=5)
 
 tk.Label(form_D, text="Date (YYYY-MM-DD):", font=("Arial", 11)).grid(row=2, column=0, sticky="e", padx=5, pady=5)
 entry_date_d = tk.Entry(form_D, font=("Arial", 11), width=12)
 entry_date_d.grid(row=2, column=1, padx=5, pady=5)
-    
+
 check_button = tk.Button(screen_D, text="Check Seats", command=seatAvail)
 check_button.pack(pady=10)
 
 avail_label = tk.Label(screen_D, text="")
 avail_label.pack(pady=10)
 
-buy_button = tk.Button(screen_D, text="Buy a Seat", width=20, command=next_from_D)
+buy_button = tk.Button(screen_D, text="Buy a Seat", width=20, state="disabled", command=next_from_D)
 buy_button.pack(pady=10)
 
 back_D = tk.Button(screen_D, text="Back", width=20, command=back_from_D)
@@ -586,10 +617,23 @@ back_D.pack(pady=10)
 
 
 # -------------------------
-# SCREEN E — Back Only
+# SCREEN E — Book a Seat and Back
 # -------------------------
-label_E = tk.Label(screen_E, text="Screen E")
+label_E = tk.Label(screen_E, text="Book a Seat")
 label_E.pack(pady=20)
+
+form_E = tk.Frame(screen_E)
+form_E.pack(pady=10)
+
+tk.Label(form_E, text="Your Name:", font=("Arial", 11)).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+entry_name_e = tk.Entry(form_E, font=("Arial", 11), width=20)
+entry_name_e.grid(row=0, column=1, padx=5, pady=5)
+
+tk.Label(form_E, text="Phone Number:", font=("Arial", 11)).grid(row=1, column=0, sticky="e", padx=5, pady=5)
+entry_phone_e = tk.Entry(form_E, font=("Arial", 11), width=20)
+entry_phone_e.grid(row=1, column=1, padx=5, pady=5)
+
+tk.Button(screen_E, text="Confirm Booking", width=20, command=book_seat).pack(pady=15)
 
 back_E = tk.Button(screen_E, text="Back", width=20, command=back_from_E)
 back_E.pack(pady=10)
