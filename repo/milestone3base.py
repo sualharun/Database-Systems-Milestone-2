@@ -52,6 +52,8 @@ def next_action():
         show_frame(screen_airport)
     elif choice == "Enter Flight Number and Date:":
         show_frame(screen_flight)
+    elif choice == "Retrieve Itinerary:":
+        show_frame(screen_F)
 
 # -------------------------
 # Helper: create a scrollable Treeview table
@@ -370,6 +372,80 @@ def back_from_E():
     show_frame(screen_D)
 
 # -------------------------
+# Logic for Screen F (Passenger Itinerary Retrieval)
+# -------------------------
+def retrieve_itinerary():
+    name = entry_name_f.get().strip()
+
+    if not name:
+        messagebox.showwarning("Missing Input", "Please enter a customer name.")
+        return
+
+    # Clear previous results
+    for widget in result_frame_f.winfo_children():
+        widget.destroy()
+
+    cursor = conn.cursor()
+    sql = """
+        SELECT
+            s.Customer_name,
+            s.Cphone,
+            s.Date,
+            s.Leg_no,
+            s.Seat_no,
+            s.Airplane_id,
+            li.Flight_number,
+            fl.Dep_airport_code,
+            dep.City            AS DepCity,
+            fl.Arr_airport_code,
+            arr.City            AS ArrCity,
+            li.Dep_time,
+            li.Arr_time,
+            at.Type_name        AS AircraftType
+        FROM SEAT s
+        JOIN LEG_INSTANCE li  ON  li.Airplane_id   = s.Airplane_id
+                               AND li.Leg_no        = s.Leg_no
+                               AND li.Date          = s.Date
+        JOIN FLIGHT_LEG   fl  ON  fl.Flight_number  = li.Flight_number
+                               AND fl.Leg_no        = li.Leg_no
+        JOIN AIRPORT      dep ON  dep.Airport_code  = fl.Dep_airport_code
+        JOIN AIRPORT      arr ON  arr.Airport_code  = fl.Arr_airport_code
+        JOIN AIRPLANE     a   ON  a.Airplane_id     = s.Airplane_id
+        JOIN AIRPLANE_TYPE at ON  at.Type_name      = a.Type_name
+        WHERE UPPER(s.Customer_name) LIKE UPPER(?)
+        ORDER BY s.Date, li.Flight_number, s.Leg_no
+    """
+    cursor.execute(sql, (f"%{name}%",))
+    rows = cursor.fetchall()
+
+    if not rows:
+        tk.Label(result_frame_f, text=f"No bookings found for customer matching '{name}'.",
+                 font=("Arial", 12)).pack(anchor="w", pady=10)
+        return
+
+    # Group by customer
+    customers = {}
+    for r in rows:
+        key = (r.Customer_name, r.Cphone)
+        customers.setdefault(key, []).append(r)
+
+    for (cname, cphone), legs in customers.items():
+        tk.Label(result_frame_f, text=f"Passenger: {cname}   Phone: {cphone or 'N/A'}",
+                 font=("Arial", 13, "bold")).pack(anchor="w", pady=5)
+        
+        tree = make_tree(result_frame_f,
+                         ("Date", "Flight #", "Leg", "Seat", "Aircraft", "From", "City", "Dep Time", "To", "City", "Arr Time"))
+        for r in legs:
+            tree.insert("", "end", values=(
+                r.Date, r.Flight_number, r.Leg_no, r.Seat_no, r.AircraftType,
+                r.Dep_airport_code, r.DepCity, r.Dep_time,
+                r.Arr_airport_code, r.ArrCity, r.Arr_time
+            ))
+
+def back_from_F():
+    show_frame(screen_main)
+
+# -------------------------
 # Create frames
 # -------------------------
 screen_main = tk.Frame(root)
@@ -378,8 +454,9 @@ screen_flight = tk.Frame(root)
 screen_C = tk.Frame(root)
 screen_D = tk.Frame(root)
 screen_E = tk.Frame(root)
+screen_F = tk.Frame(root)
 
-for frame in (screen_main, screen_airport, screen_flight, screen_C, screen_D, screen_E):
+for frame in (screen_main, screen_airport, screen_flight, screen_C, screen_D, screen_E, screen_F):
     frame.grid(row=0, column=0, sticky="nsew")
 
 root.grid_rowconfigure(0, weight=1)
@@ -408,6 +485,14 @@ radio_two = tk.Radiobutton(
     value="Enter Flight Number and Date:"
 )
 radio_two.pack(pady=5)
+
+radio_three = tk.Radiobutton(
+    screen_main,
+    text="Passenger Itinerary Retrieval",
+    variable=selected_option,
+    value="Retrieve Itinerary:"
+)
+radio_three.pack(pady=5)
 
 next_button = tk.Button(screen_main, text="Next", width=20, command=next_action)
 next_button.pack(pady=20)
@@ -637,6 +722,26 @@ tk.Button(screen_E, text="Confirm Booking", width=20, command=book_seat).pack(pa
 
 back_E = tk.Button(screen_E, text="Back", width=20, command=back_from_E)
 back_E.pack(pady=10)
+
+# -------------------------
+# SCREEN F — Passenger Itinerary Retrieval
+# -------------------------
+tk.Label(screen_F, text="Passenger Itinerary Retrieval",
+         font=("Arial", 16, "bold")).pack(pady=10)
+
+form_F = tk.Frame(screen_F)
+form_F.pack(pady=10)
+
+tk.Label(form_F, text="Customer Name (partial match supported):", font=("Arial", 11)).grid(row=0, column=0, sticky="e", padx=5, pady=5)
+entry_name_f = tk.Entry(form_F, font=("Arial", 11), width=30)
+entry_name_f.grid(row=0, column=1, padx=5, pady=5)
+
+tk.Button(screen_F, text="Retrieve Itinerary", width=20, command=retrieve_itinerary).pack(pady=15)
+
+tk.Button(screen_F, text="Back", width=20, command=back_from_F).pack(pady=10)
+
+result_frame_f = tk.Frame(screen_F)
+result_frame_f.pack(fill="both", expand=True, padx=10, pady=10)
 
 # -------------------------
 # Start on main screen
