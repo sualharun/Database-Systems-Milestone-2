@@ -26,8 +26,8 @@ This file contains the Build info, design patterns, and Quick start guide.
 2. Run setup_m1.sql (to populate and create DB baed on CSV)
 3. Run Milestone2_combined.py for command line functionality
 4. Run Milestone3base.py for GUI functionality
-       1. Once running, progress through by inputing required info (taken from CSV), hitting specialized button (if there is one) and then next
-       2. You can go back if you want, but to progress you must use next 
+    1. Once running, progress through by inputing required info (taken from CSV), hitting specialized button (if there is one) and then next
+    2. You can go back if you want, but to progress you must use next 
 
 ## Design Patterns
 Our Airport Management System was developed using the Python programming language with tkinter for creating a GUI interface, and pyodbc to interact with the MSSQL Server database hosted in a Docker container. We have used Docker for hosting our database since each team member will have the same configuration without needing to worry about their hardware situation. Screens are created using a stacked frame structure, and only one connection to the database is made across all screens, which made it easy for us to maintain code simplicity and distribution among team members.
