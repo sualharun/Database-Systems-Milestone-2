@@ -11,7 +11,7 @@ This file contains the Build info, design patterns, and Quick start guide.
 │
 ├── milestone2/
 │   ├── MileStone2_combined.py   # Main command-line application
-|   ├── MileStone3base.py   # Main GUI aaplication
+|   ├── mileStone3base.py   # Main GUI aaplication
 │   └── readme.md          # Build & run instructions (and design patterns)
 │
 └── data/
@@ -64,7 +64,7 @@ System requirements:
 #### FILES TO RUN: 
     milestone1/setup_m1.sql
     milestone2/MileStone2_combined.py
-    milestone2/Milestone3
+    milestone2/milestone3base.py
 
 BUILD INTRS:
 1) Start Docker Desktop
